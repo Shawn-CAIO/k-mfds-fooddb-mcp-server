@@ -1,363 +1,138 @@
-# K-MFDS FoodDB MCP Server
+# K-MFDS FoodDB MCP Server (FoodNtrCpntDbInfo03 포크)
 
-> **식품의약품안전처(K-MFDS) 식품영양성분DB를 MCP(Model Context Protocol) 도구로 바로 활용!**
+식품의약품안전처 식품영양성분DB를 MCP 도구로 조회하는 서버입니다.
 
-[![smithery badge](https://smithery.ai/badge/@slicequeue/k-mfds-fooddb-mcp-server)](https://smithery.ai/server/@slicequeue/k-mfds-fooddb-mcp-server)
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat-square&logo=github)](https://github.com/slicequeue/k-mfds-fooddb-mcp-server)
-[![npm](https://img.shields.io/badge/npm-package-green?style=flat-square&logo=npm)](https://www.npmjs.com/package/k-mfds-fooddb-mcp-server)
+[slicequeue/k-mfds-fooddb-mcp-server](https://github.com/slicequeue/k-mfds-fooddb-mcp-server)를 포크해 공공데이터포털의 `FoodNtrCpntDbInfo03` 서비스를 호출하도록 고쳤습니다.
 
-## 실행 화면
+> **npm에 배포하지 않았습니다.** `npx k-mfds-fooddb-mcp-server`를 실행하면 이 포크가 아니라 원작 1.0.7이 설치됩니다. 아래 방법으로 소스에서 설치하세요.
 
-| 예시1 일반 검색                                                                                                       |
-| --------------------------------------------------------------------------------------------------------------------- |
-| <img width="800" alt="image" src="https://github.com/user-attachments/assets/2781d2d6-2566-4ddb-8afb-64d2dea86816" /> |
+## 원작과 달라진 점
 
-| 예시2 응용 검색                                                                                                                                                                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <img width="800" alt="image" src="https://github.com/user-attachments/assets/4b2baa3a-523e-49be-a916-ebe8cd01264e" /><img width="800" alt="image" src="https://github.com/user-attachments/assets/39719b71-f2de-44b9-9b50-a6e5dba4da6f" /> |
+| 항목 | 원작 1.0.7 | 이 포크 |
+|---|---|---|
+| 호출 서비스 | `FoodNtrCpntDbInfo02` (HTTP) | `FoodNtrCpntDbInfo03` (HTTPS) |
+| 영양성분 표 | 159개, `FoodNtrCpntDbInfo03` 명세와 141개 불일치 | 공식 명세 157개 |
+| 쉼표가 있는 값 | `1,010.000`을 1로 읽음 | 1010으로 읽음 |
+| `SERVING_SIZE` 표시 | "1회 섭취량" | "영양성분 기준량" (공식 정의: 영양성분함량기준량) |
+| 추가 출력 | 없음 | 구분, 1회 섭취참고량, 식품중량 |
+| 표에 없는 성분 코드 | 검색 전체 실패 | 코드명으로 표시 |
+| 날짜 파라미터 설명 | `YYYYMMDD` (결과 0건) | `YYYY-MM-DD` |
 
-**사용방법은 아래 `🛠️ 사용 가능한 MCP 도구`를 참고해주세요 :)**
+`axios`와 MCP SDK도 최신 버전으로 올렸습니다.
 
----
+표 불일치의 예를 들면, `AMT_NUM23`은 공식 명세에서 콜레스테롤(mg)인데 원작은 포화지방산(g)으로 표시합니다.
 
-## ✨ 빠른 시작 (npx)
+### 서비스를 바꾼 이유
+
+이 포크를 만들 때 쓴 인증키로는 `FoodNtrCpntDbInfo02`가 403을 반환했고 `FoodNtrCpntDbInfo03`은 정상 동작했습니다. 공공데이터포털 페이지에도 `FoodNtrCpntDbInfo03`만 나옵니다.
+
+`FoodNtrCpntDbInfo02`만 신청한 기존 키에서 어떻게 동작하는지는 확인하지 못했습니다. 이 포크는 `FoodNtrCpntDbInfo03`만 호출합니다.
+
+## 설치
+
+Node.js 18 이상이 필요합니다.
 
 ```bash
-npx k-mfds-fooddb-mcp-server
+git clone https://github.com/Shawn-CAIO/k-mfds-fooddb-mcp-server.git
+cd k-mfds-fooddb-mcp-server
+npm ci --ignore-scripts
+npm run build
 ```
 
-- MCP 호환 플랫폼(예: ModelContext, MCP SDK 등)에서 바로 실행할 수 있습니다.
-- 표준 입력/출력(STDIO) 기반 MCP 서버로 동작합니다.
+## 인증키
 
----
+1. [공공데이터포털 식품영양성분DB정보](https://www.data.go.kr/data/15127578/openapi.do)에서 활용신청을 합니다.
+2. 마이페이지에서 **일반 인증키(Decoding)** 를 복사합니다.
 
-## 🚀 MCP 클라이언트 설정
+서버가 키를 URL 인코딩하므로, Encoding 키를 넣으면 이중 인코딩되어 `SERVICE_KEY_IS_NOT_REGISTERED_ERROR`(403)가 납니다.
 
-### Gemini (Google AI Studio)
+## MCP 클라이언트 설정
 
-1. **Google AI Studio**에서 새 프로젝트 생성
-2. **Tools** 섹션에서 **Add tool** 클릭
-3. **MCP Server** 선택
-4. 설정:
-   ```
-   Name: K-MFDS FoodDB
-   Command: npx k-mfds-fooddb-mcp-server
-   ```
-5. **Save** 클릭
+**Claude Code**
 
-### Cursor
+```bash
+claude mcp add --transport stdio --scope user k-mfds-fooddb --env "GOV_API_KEY=디코딩_키" -- node /절대경로/k-mfds-fooddb-mcp-server/dist/index.js
+```
 
-1. **Cursor** 설정에서 **Extensions** → **MCP** 활성화
-2. `~/.cursor/mcp_servers.json` 파일 생성/수정:
-   ```json
-   {
-     "mcpServers": {
-       "k-mfds-fooddb": {
-         "command": "npx",
-         "args": ["k-mfds-fooddb-mcp-server"],
-         "env": {
-           "GOV_API_KEY": "발급받은_식약처_API_키"
-         }
-       }
-     }
-   }
-   ```
-3. Cursor 재시작
-
-> 💡 **환경변수 설정**: `env` 섹션에 `GOV_API_KEY`를 추가하세요. API 키는 [공공데이터포털](https://www.data.go.kr/data/15000161/openapi.do)에서 발급받을 수 있습니다.
-
-### Continue
-
-1. **Continue** 설정에서 **MCP Servers** 섹션으로 이동
-2. 새 서버 추가:
-   ```yaml
-   Name: k-mfds-fooddb
-   Command: npx k-mfds-fooddb-mcp-server
-   Environment Variables:
-     GOV_API_KEY: 발급받은_식약처_API_키
-   ```
-3. **Save** 클릭
-
-> 💡 **환경변수 설정**: Environment Variables 섹션에 `GOV_API_KEY`를 추가하세요.
-
-### ModelContext
-
-1. **ModelContext** 설정에서 **MCP Servers** 탭
-2. **Add Server** 클릭
-3. 설정:
-   ```json
-   {
-     "name": "K-MFDS FoodDB",
-     "command": "npx",
-     "args": ["k-mfds-fooddb-mcp-server"],
-     "env": {
-       "GOV_API_KEY": "발급받은_식약처_API_키"
-     }
-   }
-   ```
-4. **Connect** 클릭
-
-> 💡 **환경변수 설정**: `env` 섹션에 `GOV_API_KEY`를 추가하세요.
-
-### 기타 MCP 호환 클라이언트
-
-대부분의 MCP 호환 클라이언트에서 다음과 같이 설정:
+**JSON 설정을 쓰는 클라이언트**
 
 ```json
 {
-  "name": "k-mfds-fooddb",
-  "command": "npx",
-  "args": ["k-mfds-fooddb-mcp-server"],
-  "env": {
-    "GOV_API_KEY": "발급받은_식약처_API_키"
-  }
-}
-```
-
-> 💡 **환경변수 설정**: `env` 섹션에 `GOV_API_KEY`를 추가하세요. API 키는 [공공데이터포털](https://www.data.go.kr/data/15000161/openapi.do)에서 발급받을 수 있습니다.
-
----
-
-## 📦 설치 (npm)
-
-### Installing via Smithery
-
-To install k-mfds-fooddb-mcp-server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@slicequeue/k-mfds-fooddb-mcp-server):
-
-```bash
-npx -y @smithery/cli install @slicequeue/k-mfds-fooddb-mcp-server --client claude
-```
-
-### Installing manually
-```bash
-npm install -g k-mfds-fooddb-mcp-server
-# 또는 프로젝트에 설치
-npm install k-mfds-fooddb-mcp-server
-```
-
----
-
-## ⚡ 환경 변수 설정
-
-1. `.env` 파일을 프로젝트 루트에 생성하세요. (예시: `env.example` 참고)
-2. 필수 항목:
-   - `GOV_API_KEY`: 식품의약품안전처 OpenAPI 키
-
-```env
-GOV_API_KEY=발급받은_식약처_API_키
-```
-
-> API 키는 [공공데이터포털](https://www.data.go.kr/data/15000161/openapi.do)에서 신청/발급받을 수 있습니다.
-
----
-
-## 🛠️ 사용 가능한 MCP 도구
-
-### 1. 식품 검색 도구 (`searchFoodNutrition`)
-
-- **설명**: 식품명, 제조사, 카테고리 등 다양한 조건으로 식품 영양성분 정보를 검색합니다.
-- **입력 파라미터**:
-  - `foodNameKr`: 식품명 (예: "사과")
-  - `makerName`: 제조사명 (예: "농심")
-  - `foodCategory1Name`: 식품 대분류명 (예: "과일류")
-  - `itemReportNo`: 품목제조보고번호
-  - `researchYearMonthDate`: 데이터 생성일자 (YYYYMMDD)
-  - `pageNo`: 페이지 번호 (기본값: 1)
-  - `numOfRows`: 한 페이지 결과수 (기본값: 10, 최대: 100)
-  - `updateDate`: 데이터 수정일자 (YYYYMMDD)
-  - `dbClassName`: 품목대표/상용제품 구분
-
-#### ✅ 예시 요청
-
-```json
-{
-  "foodNameKr": "사과",
-  "numOfRows": 5
-}
-```
-
-#### ✅ 예시 응답
-
-```json
-{
-  "data": [
-    {
-      "foodNameKr": "사과",
-      "makerName": "농협",
-      "foodCategory1Name": "과일류",
-      "servingSize": "100g",
-      "nutritionComponents": [
-        { "name": "열량", "value": "52", "unit": "kcal" },
-        { "name": "단백질", "value": "0.3", "unit": "g" }
-      ],
-      "itemReportNum": "2020123456789",
-      "researchDate": "20201201"
+  "mcpServers": {
+    "k-mfds-fooddb": {
+      "command": "node",
+      "args": ["/절대경로/k-mfds-fooddb-mcp-server/dist/index.js"],
+      "env": { "GOV_API_KEY": "디코딩_키" }
     }
-  ],
-  "paging": {
-    "totalCount": "100",
-    "pageNo": "1",
-    "numOfRows": "10"
   }
 }
 ```
 
----
+Claude Code에서만 테스트했습니다.
 
-### 2. 영양성분 코드 조회 도구 (`getNutritionComponentTypes`)
+## 도구
 
-- **설명**: 식품영양성분DB에서 제공하는 영양성분 코드/이름/단위 목록을 조회합니다.
-- **입력 파라미터**: 없음
+### `searchFoodNutrition`
 
-#### ✅ 예시 응답
+식품명, 제조사, 분류 등으로 영양성분을 검색합니다. `foodNameKr`, `makerName`, `foodCategory1Name`, `itemReportNo` 중 하나는 꼭 넣어야 합니다.
 
-```json
-{
-  "items": [
-    {
-      "code": "AMT_NUM1",
-      "name": "에너지",
-      "label": "에너지(kcal)",
-      "unit": "kcal"
-    },
-    { "code": "AMT_NUM2", "name": "수분", "label": "수분(g)", "unit": "g" },
-    { "code": "AMT_NUM3", "name": "단백질", "label": "단백질(g)", "unit": "g" }
-    // ... 이하 생략
-  ]
-}
+| 파라미터 | 설명 |
+|---|---|
+| `foodNameKr` | 식품명 (예: `신라면`) |
+| `makerName` | 제조사명 (예: `농심`) |
+| `foodCategory1Name` | 식품 대분류명 (예: `빵 및 과자류`) |
+| `itemReportNo` | 품목제조보고번호 |
+| `dbClassName` | `품목대표` 또는 `상용제품` |
+| `researchYearMonthDate` | 데이터 생성일자 (`YYYY-MM-DD`) |
+| `updateDate` | 데이터 수정일자 (`YYYY-MM-DD`) |
+| `pageNo` | 페이지 번호 (기본값 1) |
+| `numOfRows` | 한 페이지 결과 수 (기본값 10) |
+
+요청 `{ "foodNameKr": "신라면건면사발", "makerName": "농심", "numOfRows": 1 }`의 실제 응답입니다.
+
+```text
+1. 신라면건면사발
+- 구분: 가공식품
+- 제조사: (주)농심
+- 카테고리: 면류 > 국수
+- 영양성분 기준량: 100g
+- 1회 섭취참고량: 생·숙면 200g, 건면 100g, 당면 30g, 유탕면(봉지)120g, 유탕면(용기)80g
+- 식품중량: 77.00g
+- 영양성분: 에너지: 370kcal, 단백질: 9.09g, 지방: 5.71g, 탄수화물: 70.13g, 당류: 6.49g, 나트륨: 2117mg, 콜레스테롤: 6.49mg, 포화지방산: 1.82g, 트랜스지방산: 0g
+- 품목제조보고번호: 2007014900270
+- 데이터생성일: 2024-12-31
+
+총 1개 중 1개 결과 (페이지 1/1)
 ```
 
----
+### `getNutritionComponentTypes`
 
-## 💬 실제 사용 예시 (LLM 질문)
+조회할 수 있는 영양성분 157개의 이름과 코드를 돌려줍니다. 입력값은 없습니다.
 
-### 🍎 식품 검색 도구 사용 예시
+## 쓸 때 알아 둘 점
 
-**Claude/Cursor에서 다음과 같이 질문하세요:**
+- **수치는 기준량 기준입니다.** 위 예시의 나트륨 2117mg은 100g 기준입니다. 제품 전체나 1회 섭취량 기준이 아닙니다.
+- **검색은 포함 검색이고 관련도 정렬이 없습니다.** `사과`는 3,083건이 나오고 첫 결과가 사과파이입니다. 이름을 구체적으로 넣으세요.
+- **원본 DB에 이상값이 있습니다.** 표본 777행 중 2행에서 불가능한 값을 봤습니다(예: 달걀말이 포화지방산 265g, 지방 전체는 5.33g). 서버는 값을 고치지 않고 그대로 보여 줍니다. 건강과 관련된 판단에는 원본 자료와 전문가 의견을 함께 확인하세요.
 
-> "사과의 영양성분 정보를 알려줘"
+## 알려진 한계
 
-> "농심에서 만드는 라면의 영양성분을 검색해줘"
+- API 오류가 나도 MCP 응답에 `isError`가 붙지 않고, 일부 오류 메시지는 원인을 알기 어렵습니다.
+- `npx tsc --noEmit`을 실행하면 `src/index.ts`에서 TS2589가 납니다. MCP SDK 업데이트 후 생긴 타입 검사 문제로, 빌드와 실행에는 영향이 없습니다.
+- `npm audit`에 `zod` 3의 메모리 고갈 취약점이 나옵니다. 고치려면 호환성이 깨지는 메이저 업데이트가 필요해 그대로 두었습니다.
 
-> "과일류 카테고리에서 칼로리가 낮은 식품들을 찾아줘"
+## 테스트
 
-### 📊 영양성분 코드 조회 도구 사용 예시
-
-**Claude/Cursor에서 다음과 같이 질문하세요:**
-
-> "식품영양성분DB에서 제공하는 영양성분 코드 목록을 보여줘"
-
-> "어떤 영양성분들을 조회할 수 있나요?"
-
-> "영양성분 단위 정보를 알려줘"
-
-> "식품영양성분DB의 영양성분 분류 체계를 설명해줘"
-
-### 🎯 실제 대화 예시
-
-**사용자**: "사과의 영양성분을 알려줘"
-
-**AI**: "사과의 영양성분 정보를 검색해드리겠습니다."
-
-_[MCP 도구 호출: searchFoodNutrition]_
-
-**AI**: "사과의 영양성분 정보입니다:
-
-- 열량: 52 kcal (100g 기준)
-- 단백질: 0.3g
-- 지방: 0.2g
-- 탄수화물: 13.8g
-- 식이섬유: 2.4g
-  ..."
-
-**사용자**: "어떤 영양성분들을 조회할 수 있나요?"
-
-**AI**: "식품영양성분DB에서 제공하는 영양성분 코드 목록을 확인해드리겠습니다."
-
-_[MCP 도구 호출: getNutritionComponentTypes]_
-
-**AI**: "다음과 같은 영양성분들을 조회할 수 있습니다:
-
-- 에너지 (kcal)
-- 수분 (g)
-- 단백질 (g)
-- 지방 (g)
-- 탄수화물 (g)
-- 식이섬유 (g)
-- 회분 (g)
-- 나트륨 (mg)
-- 칼륨 (mg)
-  ..."
-
-### 🔍 고급 검색 예시
-
-**사용자**: "닭가슴살 중에 칼로리가 낮고 단백질이 높은 식품을 찾아줘"
-
-**AI**: "닭가슴살 관련 식품 중에서 칼로리가 낮고 단백질이 높은 것들을 검색해드리겠습니다. 식품영양성분DB에서 닭가슴살 관련 제품들을 찾아보겠습니다."
-
-_[MCP 도구 호출: searchFoodNutrition]_
-
-**AI**: "식품영양성분DB에서 닭가슴살 관련 제품들을 검색한 결과, 다음과 같은 식품들을 추천드립니다:
-
-1. 닭가슴살 (생것, 100g 기준)
-   - 열량: 165 kcal
-   - 단백질: 31g
-   - 지방: 3.6g
-2. 닭가슴살 (구운것, 100g 기준)
-   - 열량: 165 kcal
-   - 단백질: 31g
-   - 지방: 3.6g
-3. 닭가슴살 (삶은것, 100g 기준)
-   - 열량: 165 kcal
-   - 단백질: 31g
-   - 지방: 3.6g
-4. 닭가슴살 (튀긴것, 100g 기준)
-   - 열량: 165 kcal
-   - 단백질: 31g
-   - 지방: 3.6g
-     ..."
-
----
-
-## 🏃 MCP 서버 직접 실행 예시
+실제 API를 호출하는 테스트가 포함되어 있어 인증키가 필요합니다.
 
 ```bash
-npx k-mfds-fooddb-mcp-server
+GOV_API_KEY=디코딩_키 npm test
 ```
 
-- MCP 플랫폼에서 자동으로 도구를 인식/등록합니다.
-- STDIO 기반이므로, MCP SDK/ModelContext 등에서 바로 연결해 사용할 수 있습니다.
+## 유지보수
 
----
+개인적으로 쓰려고 고친 포크이며 유지보수나 답변을 보장하지 않습니다. 공공데이터포털 API가 바뀌면 동작하지 않을 수 있습니다.
 
-## 🏗️ 프로젝트 구조 (참고)
+## 라이선스
 
-```
-src/
-├── config/           # 환경변수 및 설정
-├── external/         # 외부 API 연동/매핑
-├── tools/            # MCP 도구 구현
-└── index.ts          # MCP 서버 진입점
-```
-
----
-
-## 🧪 테스트
-
-```bash
-npm test
-```
-
----
-
-## 🤝 기여 및 문의
-
-- Pull Request/이슈 환영합니다!
-- 문의: [GitHub Issues](https://github.com/slicequeue/k-mfds-fooddb-mcp-server/issues)
-- 저장소: [GitHub Repository](https://github.com/slicequeue/k-mfds-fooddb-mcp-server)
-
----
-
-## 📄 라이선스
-
-ISC
+[ISC](LICENSE). 원작자는 [slicequeue](https://github.com/slicequeue)입니다.
