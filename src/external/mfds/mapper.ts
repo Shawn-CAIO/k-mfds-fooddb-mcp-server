@@ -10,27 +10,35 @@ interface AmtNumDataItem {
   value: number;
 }
 
+// API 값에는 '1,010.000'처럼 천 단위 쉼표가 들어 있어 parseFloat에 그대로 넘기면 1이 된다.
+const parseAmount = (raw: unknown): number | null => {
+  const text = String(raw ?? '').replace(/,/g, '').trim();
+  if (text === '') return null;
+  const value = Number(text);
+  return Number.isFinite(value) ? value : null;
+};
+
 const toNutritionComponent = (apiResponseBodyArrayItem: Record<string, any>): NutritionComponent[] => {
   const amtNumDataList: AmtNumDataItem[] = [];
   Object.keys(apiResponseBodyArrayItem).filter(each =>
     each.indexOf(KEY_NAME_PREFIX_NUTRITION_COMPONENT) === 0)
     .forEach(key => {
-      if (apiResponseBodyArrayItem[key] !== '') {
-        amtNumDataList.push({
-          key: key.trim(),
-          value: parseFloat(apiResponseBodyArrayItem[key])
-        });
+      const value = parseAmount(apiResponseBodyArrayItem[key]);
+      if (value !== null) {
+        amtNumDataList.push({ key: key.trim(), value });
       }
     });
 
-  return amtNumDataList.map(elem =>
-    new NutritionComponent({
-      name: AmtNumDataType[elem.key].name,
-      label: AmtNumDataType[elem.key].label,
+  return amtNumDataList.map(elem => {
+    // API 개편으로 표에 없는 코드가 와도 검색 전체가 실패하지 않도록 코드명을 그대로 표시한다.
+    const type = AmtNumDataType[elem.key] ?? { name: elem.key, label: elem.key, unit: '' };
+    return new NutritionComponent({
+      name: type.name,
+      label: type.label,
       value: elem.value,
-      unit: AmtNumDataType[elem.key].unit,
-    })
-  );
+      unit: type.unit,
+    });
+  });
 }
 
 /**

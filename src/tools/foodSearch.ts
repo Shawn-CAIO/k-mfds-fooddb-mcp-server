@@ -10,10 +10,10 @@ export const foodSearchTool = {
     makerName: z.string().optional().describe('제조사명 (예: "농심", "롯데")'),
     foodCategory1Name: z.string().optional().describe('식품 대분류명 (예: "곡류", "채소류", "육류")'),
     itemReportNo: z.string().optional().describe('품목제조보고번호'),
-    researchYearMonthDate: z.string().optional().describe('데이터 생성일자 (YYYYMMDD 형식)'),
+    researchYearMonthDate: z.string().optional().describe('데이터 생성일자 (YYYY-MM-DD 형식)'),
     pageNo: z.number().optional().describe('페이지 번호 (기본값: 1)'),
     numOfRows: z.number().optional().describe('한 페이지 결과수 (기본값: 10, 최대: 100)'),
-    updateDate: z.string().optional().describe('데이터 수정일자 (YYYYMMDD 형식)'),
+    updateDate: z.string().optional().describe('데이터 수정일자 (YYYY-MM-DD 형식)'),
     dbClassName: z.string().optional().describe('품목대표/상용제품 구분')
   },
   handler: async (params: any) => {
@@ -60,12 +60,22 @@ export const foodSearchTool = {
           `${comp.name}: ${comp.value}${comp.unit}`
         ).join(', ');
         
+        const category = [
+          food.foodCategory1Name,
+          food.foodRepresentName,
+          food.foodCategory2Name,
+          food.foodCategory3Name,
+        ].filter(Boolean).join(' > ');
+
         return `${index + 1}. ${food.foodNameKr}
-- 제조사: ${food.makerName}
-- 카테고리: ${food.foodCategory1Name} > ${food.foodCategory2Name} > ${food.foodCategory3Name}
-- 1회 섭취량: ${food.servingSize}
+- 구분: ${food.dbGroupName || '-'}
+- 제조사: ${food.makerName || '-'}
+- 카테고리: ${category || '-'}
+- 영양성분 기준량: ${food.servingSize || '-'}
+- 1회 섭취참고량: ${food.nutritionalAmountPerServing || '-'}
+- 식품중량: ${food.foodWeight || '-'}
 - 영양성분: ${nutritionInfo}
-- 품목제조보고번호: ${food.itemReportNum}
+- 품목제조보고번호: ${food.itemReportNum || '-'}
 - 데이터생성일: ${food.researchDate}`;
       }).join('\n\n');
 

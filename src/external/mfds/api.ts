@@ -9,7 +9,7 @@ const DataType = {
 
 type DataType = typeof DataType[keyof typeof DataType];
 
-const API_URL = 'http://apis.data.go.kr/1471000/FoodNtrCpntDbInfo02';
+const API_URL = 'https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo03';
 
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -45,7 +45,7 @@ export async function getFoodNutritionComponentDatabaseInquery(
   updateDate: string = '',
   dbClassName: string = '',
 ): Promise<any> {
-  const res = await axiosInstance.get('/getFoodNtrCpntDbInq02', {
+  const res = await axiosInstance.get('/getFoodNtrCpntDbInq03', {
     params: {
       FOOD_NM_KR: foodNameKr,
       RESEARCH_YMD: researchYearMonthDate,
